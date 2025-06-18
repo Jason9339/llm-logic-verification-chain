@@ -52,25 +52,37 @@ class VerificationLayer:
         
         verification_results = []
         
-        # 對每個成功的答案進行交叉驗證
+        # 對每個答案進行交叉驗證（包括失敗的答案）
         for answer in answers:
-            if answer['success']:
-                target_model_short = self._get_model_short_name(answer['model'])
+            target_model_short = self._get_model_short_name(answer['model'])
+            
+            # 串行處理驗證模型，進行交叉驗證
+            for verification_model in verification_models:
+                verification_model_short = self._get_model_short_name(verification_model)
                 
-                # 串行處理驗證模型，進行交叉驗證
-                for verification_model in verification_models:
-                    verification_model_short = self._get_model_short_name(verification_model)
-                    
-                    # 交叉驗證：不讓模型驗證自己的答案
-                    if verification_model_short != target_model_short:
-                        if self.config.is_model_available(verification_model):
-                            print(f"正在使用 {verification_model} 驗證 {answer['model']} 的答案")
+                # 交叉驗證：不讓模型驗證自己的答案
+                if verification_model_short != target_model_short:
+                    if self.config.is_model_available(verification_model):
+                        print(f"正在使用 {verification_model} 驗證 {answer['model']} 的答案")
+                        
+                        # 如果作答失敗，驗證失敗原因
+                        if not answer['success']:
+                            verification_results.append({
+                                'verification_model': verification_model,
+                                'target_model': answer['model'],
+                                'success': True,
+                                'verdict': 'Incorrect',
+                                'error_reason': f"作答層失敗：{answer['error']}",
+                                'raw_response': f"作答失敗，無法驗證：{answer['error']}"
+                            })
+                        else:
                             verification = await self._verify_single_answer(
                                 question, answer, verification_model
                             )
                             verification_results.append(verification)
-                            # 在每次驗證之間稍作延遲
-                            await asyncio.sleep(2)
+                        
+                        # 在每次驗證之間稍作延遲
+                        await asyncio.sleep(2)
         
         return verification_results
     

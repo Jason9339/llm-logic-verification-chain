@@ -132,19 +132,59 @@ class LLMClient:
         }
     
     def parse_json_response(self, response_text: str) -> Dict[str, Any]:
-        """解析JSON回應"""
+        """解析JSON回應，處理常見格式問題"""
         try:
             # 嘗試直接解析
             return json.loads(response_text)
         except json.JSONDecodeError:
-            # 嘗試提取JSON部分
-            import re
-            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-            if json_match:
-                try:
-                    return json.loads(json_match.group())
-                except json.JSONDecodeError:
-                    pass
+            try:
+                # 處理多行字串問題：替換reasoning欄位中的換行符
+                import re
+                
+                # 找到JSON結構
+                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                if json_match:
+                    json_text = json_match.group()
+                    
+                    # 修復reasoning欄位中的換行符問題
+                    # 找到reasoning欄位並處理其內容
+                    reasoning_pattern = r'"reasoning":\s*"([^"]*(?:\\.[^"]*)*)"'
+                    
+                    def fix_reasoning(match):
+                        reasoning_content = match.group(1)
+                        # 將換行符替換為空格，保持內容連貫
+                        fixed_content = reasoning_content.replace('\n', ' ').replace('\r', ' ')
+                        # 移除多餘空格
+                        fixed_content = re.sub(r'\s+', ' ', fixed_content).strip()
+                        return f'"reasoning": "{fixed_content}"'
+                    
+                    json_text = re.sub(reasoning_pattern, fix_reasoning, json_text, flags=re.DOTALL)
+                    
+                    # 嘗試解析修復後的JSON
+                    return json.loads(json_text)
+                
+            except (json.JSONDecodeError, AttributeError):
+                pass
+            
+            # 如果無法解析，嘗試提取基本信息
+            try:
+                import re
+                
+                # 嘗試提取answer欄位
+                answer_match = re.search(r'"answer":\s*"([^"]*)"', response_text)
+                answer = answer_match.group(1) if answer_match else "解析失敗"
+                
+                # 嘗試提取reasoning的部分內容（前100字符）
+                reasoning_match = re.search(r'"reasoning":\s*"([^"]{0,100})', response_text)
+                reasoning = reasoning_match.group(1) if reasoning_match else "推理過程解析失敗"
+                
+                return {
+                    'answer': answer,
+                    'reasoning': reasoning + "...(JSON格式錯誤，僅提取部分內容)",
+                    'parse_warning': True
+                }
+            except:
+                pass
             
             # 如果無法解析，返回錯誤信息
             return {

@@ -38,10 +38,26 @@ async def main():
     
     # 檢查API配置
     config = Config()
-    if not config.OPENROUTER_API_KEY:
-        print(f"{Fore.RED}錯誤: OpenRouter API密鑰未配置")
-        print(f"{Fore.YELLOW}請在.env文件中設置 OPENROUTER_API_KEY")
+    
+    # 檢查是否有可用的API密鑰
+    available_apis = []
+    if config.GROQ_API_KEY:
+        available_apis.append("Groq")
+    if config.OPENAI_API_KEY:
+        available_apis.append("OpenAI")
+    if config.ANTHROPIC_API_KEY:
+        available_apis.append("Anthropic")
+    if config.GOOGLE_API_KEY:
+        available_apis.append("Google")
+    if config.OPENROUTER_API_KEY:
+        available_apis.append("OpenRouter")
+    
+    if not available_apis:
+        print(f"{Fore.RED}錯誤: 未配置任何API密鑰")
+        print(f"{Fore.YELLOW}請在.env文件中設置至少一個API密鑰 (GROQ_API_KEY, OPENAI_API_KEY, 等)")
         return
+    
+    print(f"{Fore.GREEN}可用API: {', '.join(available_apis)}")
     
     # 創建系統協調器
     system = SystemCoordinator()

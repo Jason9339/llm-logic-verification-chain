@@ -258,7 +258,7 @@ class SystemCoordinator:
         return "\n".join(output)
     
     def save_results(self, results: Dict[str, Any], filename: Optional[str] = None) -> str:
-        """保存結果到文件"""
+        """保存結果到文件，並為每層創建詳細的輸出文件"""
         if filename is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"logic_verification_result_{timestamp}.json"
@@ -267,9 +267,130 @@ class SystemCoordinator:
         results_dir = self.config.RESULTS_DIR
         os.makedirs(results_dir, exist_ok=True)
         
-        # 保存結果
+        # 保存主要結果文件
         filepath = os.path.join(results_dir, filename)
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(results, f, ensure_ascii=False, indent=2)
         
-        return filepath 
+        # 為每層創建詳細的輸出文件
+        self._save_layer_outputs(results, filename)
+        
+        return filepath
+    
+    def _save_layer_outputs(self, results: Dict[str, Any], main_filename: str):
+        """為每層創建詳細的輸出文件"""
+        timestamp = main_filename.replace('logic_verification_result_', '').replace('.json', '')
+        base_name = f"layer_outputs_{timestamp}"
+        
+        layer_results = results.get('layer_results', {})
+        
+        # 第一層：作答層輸出
+        answering_results = layer_results.get('answering', [])
+        if answering_results:
+            answering_file = os.path.join(self.config.RESULTS_DIR, f"{base_name}_layer1_answering.txt")
+            with open(answering_file, 'w', encoding='utf-8') as f:
+                f.write("=" * 80 + "\n")
+                f.write("第一層：作答層 (Answering Layer) 原始輸出\n")
+                f.write("=" * 80 + "\n\n")
+                f.write(f"問題：{results['question']}\n\n")
+                
+                for i, result in enumerate(answering_results, 1):
+                    f.write(f"{'='*50}\n")
+                    f.write(f"作答模型 {i}: {result['model']}\n")
+                    f.write(f"{'='*50}\n")
+                    f.write(f"成功: {result['success']}\n")
+                    
+                    if result['success']:
+                        f.write(f"解析後答案: {result.get('answer', 'N/A')}\n")
+                        f.write(f"解析後推理: {result.get('reasoning', 'N/A')}\n\n")
+                    else:
+                        f.write(f"錯誤: {result['error']}\n\n")
+                    
+                    f.write("原始LLM回應:\n")
+                    f.write("-" * 40 + "\n")
+                    f.write(result.get('raw_response', '無原始回應') + "\n")
+                    f.write("-" * 40 + "\n\n")
+        
+        # 第二層：驗證層輸出
+        verification_results = layer_results.get('verification', [])
+        if verification_results:
+            verification_file = os.path.join(self.config.RESULTS_DIR, f"{base_name}_layer2_verification.txt")
+            with open(verification_file, 'w', encoding='utf-8') as f:
+                f.write("=" * 80 + "\n")
+                f.write("第二層：驗證層 (Verification Layer) 原始輸出\n")
+                f.write("=" * 80 + "\n\n")
+                
+                for i, result in enumerate(verification_results, 1):
+                    f.write(f"{'='*50}\n")
+                    f.write(f"驗證 {i}: {result['verification_model']} → {result['target_model']}\n")
+                    f.write(f"{'='*50}\n")
+                    f.write(f"成功: {result['success']}\n")
+                    
+                    if result['success']:
+                        f.write(f"驗證結果: {result.get('verdict', 'N/A')}\n")
+                        f.write(f"錯誤原因: {result.get('error_reason', 'N/A')}\n\n")
+                    else:
+                        f.write(f"錯誤: {result['error']}\n\n")
+                    
+                    f.write("原始LLM回應:\n")
+                    f.write("-" * 40 + "\n")
+                    f.write(result.get('raw_response', '無原始回應') + "\n")
+                    f.write("-" * 40 + "\n\n")
+        
+        # 第三層：訂正層輸出
+        correction_results = layer_results.get('correction', [])
+        if correction_results:
+            correction_file = os.path.join(self.config.RESULTS_DIR, f"{base_name}_layer3_correction.txt")
+            with open(correction_file, 'w', encoding='utf-8') as f:
+                f.write("=" * 80 + "\n")
+                f.write("第三層：訂正層 (Correction Layer) 原始輸出\n")
+                f.write("=" * 80 + "\n\n")
+                
+                for i, result in enumerate(correction_results, 1):
+                    f.write(f"{'='*50}\n")
+                    f.write(f"訂正 {i}: {result['model']}\n")
+                    f.write(f"{'='*50}\n")
+                    f.write(f"需要訂正: {result.get('needs_correction', False)}\n")
+                    f.write(f"訂正已應用: {result.get('correction_applied', False)}\n")
+                    
+                    if result.get('needs_correction', False):
+                        f.write(f"原始答案: {result.get('original_answer', 'N/A')}\n")
+                        if result.get('correction_applied', False):
+                            f.write(f"修正答案: {result.get('revised_answer', 'N/A')}\n")
+                    
+                    f.write("原始LLM回應:\n")
+                    f.write("-" * 40 + "\n")
+                    f.write(result.get('raw_response', '無原始回應') + "\n")
+                    f.write("-" * 40 + "\n\n")
+        
+        # 第四層：決策層輸出
+        decision_result = layer_results.get('decision', {})
+        if decision_result:
+            decision_file = os.path.join(self.config.RESULTS_DIR, f"{base_name}_layer4_decision.txt")
+            with open(decision_file, 'w', encoding='utf-8') as f:
+                f.write("=" * 80 + "\n")
+                f.write("第四層：決策層 (Decision Layer) 原始輸出\n")
+                f.write("=" * 80 + "\n\n")
+                f.write(f"決策模型: {decision_result.get('decision_model', 'N/A')}\n")
+                f.write(f"成功: {decision_result.get('success', False)}\n")
+                
+                if decision_result.get('success', False):
+                    f.write(f"最終答案: {decision_result.get('final_answer', 'N/A')}\n")
+                    f.write(f"信心度: {decision_result.get('answer_confidence', 0):.2%}\n")
+                    f.write(f"推理過程: {decision_result.get('reasoning', 'N/A')}\n")
+                    f.write(f"證據分析: {decision_result.get('evidence_analysis', 'N/A')}\n")
+                else:
+                    f.write(f"錯誤: {decision_result.get('error', 'N/A')}\n")
+                
+                f.write("\n原始LLM回應:\n")
+                f.write("-" * 40 + "\n")
+                f.write(decision_result.get('raw_response', '無原始回應') + "\n")
+                f.write("-" * 40 + "\n")
+        
+        print(f"詳細輸出文件已保存:")
+        print(f"  作答層: {base_name}_layer1_answering.txt")
+        if verification_results:
+            print(f"  驗證層: {base_name}_layer2_verification.txt")
+        if correction_results:
+            print(f"  訂正層: {base_name}_layer3_correction.txt")
+        print(f"  決策層: {base_name}_layer4_decision.txt") 
