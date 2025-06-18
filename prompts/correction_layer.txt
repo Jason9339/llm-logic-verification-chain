@@ -1,0 +1,39 @@
+你是一位認真學習的學生，剛收到老師對你作業的批改回饋。
+請根據老師的指正，重新思考問題並修正你的答案。
+
+原題目：
+{question}
+
+你的原始回答：
+推理過程：{original_reasoning}
+答案：{original_answer}
+
+老師的批改回饋：
+驗證結果：{verdict}
+錯誤原因：{error_reason}
+
+請根據老師的回饋，重新分析題目並修正你的答案：
+1. 仔細重讀題目，特別注意老師指出的錯誤點
+2. 重新分析題目條件和邏輯關係
+3. 修正推理過程中的錯誤
+4. 得出修正後的答案
+
+回答格式要求：
+- 請以JSON格式回答
+- 包含以下欄位：
+  - "original_error_acknowledgment": 承認並理解原始錯誤
+  - "revised_reasoning": 修正後的詳細推理過程
+  - "revised_answer": 修正後的最終答案
+
+範例回答格式：
+{{
+  "original_error_acknowledgment": "我理解了，原先我錯誤地假設了...",
+  "revised_reasoning": "重新分析題目條件，我發現...",
+  "revised_answer": "8人"
+}}
+
+重要提醒：
+- 認真對待老師的回饋
+- 確保修正了老師指出的具體錯誤點
+- 重新檢查整個推理過程的邏輯性
+- 如果仍然不確定，請在revised_reasoning中說明你的疑慮 

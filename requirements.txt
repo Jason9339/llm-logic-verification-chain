@@ -1,0 +1,28 @@
+# 多層次LLM邏輯題驗證系統依賴包
+
+# 環境配置
+python-dotenv>=1.0.0
+
+# LLM API 客戶端
+aisuite>=0.1.0         # AI Suite - 統一AI提供商接口
+openai>=1.0.0          # OpenAI API (同時支援OpenRouter)
+anthropic>=0.3.0       # Anthropic Claude API
+google-generativeai>=0.3.0  # Google Gemini API
+groq>=0.4.0           # Groq API (如果需要)
+
+# 異步處理
+asyncio>=3.4.3
+aiohttp>=3.8.0
+
+# 數據處理
+requests>=2.28.0
+json5>=0.9.0
+
+# 命令行界面
+colorama>=0.4.6
+click>=8.1.0
+rich>=13.0.0          # 用於美化終端輸出
+
+# 測試和開發
+pytest>=7.0.0
+pytest-asyncio>=0.21.0 
